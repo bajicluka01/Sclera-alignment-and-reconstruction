@@ -29,9 +29,28 @@ def findPoints(im):
     im = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
     #thresh, im_bw = cv.threshold(im, 127, 255, cv.THRESH_BINARY)
     ret, thresh = cv.threshold(im, 127, 255, 0)
-    #displayImage(thresh)
+    #find contours
     contours, hierarchy = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     image = cv.drawContours(image, contours, -1, (0,255,0), 10)
+
+    #find extremes
+    cnt = contours[0]
+    m = cv.moments(cnt)
+    centroid_x = int(m['m10']/m['m00'])
+    centroid_y = int(m['m01']/m['m00'])
+
+    image = cv.circle(image, (centroid_x, centroid_y), 10, (0,0,255), -1)
+
+    left = tuple(cnt[cnt[:,:,0].argmin()][0])
+    right = tuple(cnt[cnt[:,:,0].argmax()][0])
+    top = tuple(cnt[cnt[:,:,1].argmin()][0])
+    bottom = tuple(cnt[cnt[:,:,1].argmax()][0])
+
+    image = cv.circle(image, left, 15, (255,0,0), -1)
+    image = cv.circle(image, right, 15, (255,0,0), -1)
+    image = cv.circle(image, top, 15, (255,0,0), -1)
+    image = cv.circle(image, bottom, 15, (255,0,0), -1)
+
     return image
 
 
