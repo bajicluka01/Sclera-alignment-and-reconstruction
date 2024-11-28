@@ -25,11 +25,14 @@ def writeImage(im, out):
 
 
 def findPoints(im):
-    im = cv.cvtColor(im, cv.COLOR_BGR2GRAY)
-    thresh, im_bw = cv.threshold(im, 127, 255, cv.THRESH_BINARY)
-    contours, hierarchy = cv.findContours(im_bw, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-    im = cv.drawContours(im, contours, -1, (0,255,0), 3)
-    return im
+    image=im.copy()
+    im = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    #thresh, im_bw = cv.threshold(im, 127, 255, cv.THRESH_BINARY)
+    ret, thresh = cv.threshold(im, 127, 255, 0)
+    #displayImage(thresh)
+    contours, hierarchy = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    image = cv.drawContours(image, contours, -1, (0,255,0), 10)
+    return image
 
 
 img = cv.imread("SBVPI/1/1L_s_1_sclera.png")
