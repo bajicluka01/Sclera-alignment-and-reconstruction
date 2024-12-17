@@ -1,5 +1,6 @@
 import cv2 as cv
 import numpy as np
+import os
 #import imutils
 
 outputFolder = "output"
@@ -34,12 +35,22 @@ def findPoints(im):
     image = cv.drawContours(image, contours, -1, (0,255,0), 10)
 
     #find extremes
-    cnt = contours[0]
-    m = cv.moments(cnt)
-    centroid_x = int(m['m10']/m['m00'])
-    centroid_y = int(m['m01']/m['m00'])
 
-    image = cv.circle(image, (centroid_x, centroid_y), 10, (0,0,255), -1)
+    #here we just take the longest contour (works fine on almost all images, but might need to be improved)
+    #21L_r_4_sclera.png
+    #14R_l_4_sclera.png ...
+
+    contours = sorted(contours, key=len, reverse=True)
+    if len(contours) != 0:
+        cnt = contours[0]
+        m = cv.moments(cnt)
+        if m['m00'] != 0:
+            centroid_x = int(m['m10']/m['m00'])
+            centroid_y = int(m['m01']/m['m00'])
+            image = cv.circle(image, (centroid_x, centroid_y), 10, (0,0,255), -1)
+    else:
+        print("zero!")
+        return image
 
     left = tuple(cnt[cnt[:,:,0].argmin()][0])
     right = tuple(cnt[cnt[:,:,0].argmax()][0])
@@ -53,10 +64,40 @@ def findPoints(im):
 
     return image
 
+def alignment(im):
+    return 0
 
-img = cv.imread("SBVPI/1/1L_s_1_sclera.png")
+def normalization(im):
+    return 0
+
+def reconstruction(imgs):
+    return 0
+
+def read_images():
+    imgs = []
+    subjects = []
+    dbfolder = "SBVPI/"
+    for file in os.scandir(dbfolder):
+        current = file.name
+        subjects.append(current)
+        for img in os.scandir(dbfolder+current+"/"):
+            imgs.append(dbfolder+current+"/"+img.name)
+    return subjects, imgs
+
+
+ids, images = read_images()
+scleras = [x for x in images if "sclera" in x]
+
+#img = cv.imread("SBVPI/1/1L_s_1_sclera.png")
 #displayImage(img)
-img = findPoints(img)
-displayImage(img)
+#img = findPoints(img)
+
+for scl in scleras:
+    img = cv.imread(scl)
+    img = findPoints(img)
+    #print(scl)
+    #displayImage(img)
 writeImage(img, outputFolder)
+
+
 
