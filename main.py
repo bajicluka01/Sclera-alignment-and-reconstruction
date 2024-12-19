@@ -2,11 +2,12 @@ import cv2 as cv
 import numpy as np
 import os
 from sklearn.decomposition import PCA
+from scipy.spatial import distance
 #import imutils
 
 outputFolder = "output"
 
-def displayImage(im, windowSize = [800, 600]):
+def displayImage(im, windowName, windowSize = [800, 600]):
     #resize image to fit the window
     #(h, w) = im.shape[:2]
     #r = windowSize[0] / float(w)
@@ -15,9 +16,9 @@ def displayImage(im, windowSize = [800, 600]):
     #im = cv.resize(im, (windowSize[0], windowSize[1]), interpolation=cv.INTER_AREA)
     #im = imutils.resize(im, height=windowSize[1])
 
-    cv.namedWindow("resized_window", cv.WINDOW_NORMAL | cv.WINDOW_KEEPRATIO) 
-    cv.resizeWindow("resized_window", windowSize[0], windowSize[1])
-    cv.imshow("resized_window", im)
+    cv.namedWindow("resized window", cv.WINDOW_NORMAL | cv.WINDOW_KEEPRATIO) 
+    cv.resizeWindow("resized window", windowSize[0], windowSize[1])
+    cv.imshow("resized window", im)
     k = cv.waitKey(0) # Wait for a keystroke in the window
     if k == 's':
         return
@@ -109,10 +110,12 @@ def normalization(im, center, pois):
     bb_topleft = (pois[0][0], pois[2][1])
     bb_bottomright = (pois[1][0], pois[3][1])
 
-    print(pois)
-    print(bb_topleft, bb_bottomright)
     cv.rectangle(im, bb_topleft, bb_bottomright, (0,0,255), 5)
-    return im
+
+    cropped = im[pois[2][1]:pois[3][1], pois[0][0]:pois[1][0]].copy()
+    #TODO: preserve ratio, potentially add padding
+
+    return cropped
 
 def reconstruction(imgs):
     return 0
@@ -128,6 +131,10 @@ def read_images():
             imgs.append(dbfolder+current+"/"+img.name)
     return subjects, imgs
 
+def similarity(im1, im2, covarianceMatrix):
+    dist = distance.mahalanobis(im1, im2, covarianceMatrix)
+    return dist
+
 
 ids, images = read_images()
 scleras = [x for x in images if "sclera" in x]
@@ -136,14 +143,41 @@ scleras = [x for x in images if "sclera" in x]
 #displayImage(img)
 #img = findPoints(img)
 
+vessels = [x for x in images if "vessels" in x]
+
+im1 = cv.imread(vessels[0])
+im1 = cv.cvtColor(im1, cv.COLOR_BGR2GRAY)
+#im1 = np.matrix.flatten(im1)
+im2 = cv.imread(vessels[1])
+im2 = cv.cvtColor(im2, cv.COLOR_BGR2GRAY)
+im2 = np.matrix.flatten(im2)
+
+im1mean = im1.mean()
+im2mean = im2.mean()
+#covariance = np.sum((im1-im1mean) * (im1-im1mean)) / (len(im1) - 1)
+#im1 = np.matrix.flatten(im1)
+#im1 = np.matrix.flatten(im1)
+#covarianceMatrix = np.cov(im1, im1)
+#covarianceMatrix = np.multiply(im1, np.matrix.transpose(im1))
+#covarianceMatrix = np.multiply(im1, im1)
+#covarianceMatrix = np.matrix.transpose(im1).dot(im1)
+#im1 = np.matrix.flatten(im1)
+
+#print(covarianceMatrix.shape)
+#print(im1.shape)
+#print(np.linalg.inv(covarianceMatrix))
+#print(similarity(im1, im1, np.linalg.inv(covarianceMatrix)))
+#print(similarity(im1, im1, covarianceMatrix))
+
 for scl in scleras:
     img = cv.imread(scl)
     img, center, pois = findPoints(img)
     #print(scl)
-    displayImage(img)
+    displayImage(img, scl)
 
     img = alignment(img, center, pois)
     normalized = normalization(img, center, pois)
-    displayImage(normalized)
+    displayImage(normalized, scl)
+
 
 #writeImage(img, outputFolder)
