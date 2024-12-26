@@ -8,24 +8,20 @@ from scipy.spatial import distance
 outputFolder = "output"
 
 def displayImage(im, windowName, windowSize = [800, 600]):
-    #resize image to fit the window
-    #(h, w) = im.shape[:2]
-    #r = windowSize[0] / float(w)
-    #dim = (windowSize[1], int(h * r))
-    #im = cv.resize(im, dim)
-    #im = cv.resize(im, (windowSize[0], windowSize[1]), interpolation=cv.INTER_AREA)
-    #im = imutils.resize(im, height=windowSize[1])
+    #to preserve ratio
+    factor = im.shape[1] / windowSize[0]
 
     cv.namedWindow("resized window", cv.WINDOW_NORMAL | cv.WINDOW_KEEPRATIO) 
-    cv.resizeWindow("resized window", windowSize[0], windowSize[1])
+    #cv.resizeWindow("resized window", windowSize[0], windowSize[1])
+    cv.resizeWindow("resized window", int(im.shape[1]/factor), int(im.shape[0]/factor))
     cv.imshow("resized window", im)
     k = cv.waitKey(0) # Wait for a keystroke in the window
-    if k == 's':
-        return
+    #a to exit
+    if k == 97:
+        exit()
 
 def writeImage(im, out):
     cv.imwrite(out+"/test.png", im)
-
 
 def findPoints(im):
     image = im.copy()
@@ -113,8 +109,6 @@ def normalization(im, center, pois):
     cv.rectangle(im, bb_topleft, bb_bottomright, (0,0,255), 5)
 
     cropped = im[pois[2][1]:pois[3][1], pois[0][0]:pois[1][0]].copy()
-    #TODO: preserve ratio, potentially add padding
-
     return cropped
 
 def reconstruction(imgs):
@@ -177,7 +171,7 @@ for scl in scleras:
 
     img = alignment(img, center, pois)
     normalized = normalization(img, center, pois)
+    #displayImage(normalized, scl, (normalized.shape[1], normalized.shape[0]))
     displayImage(normalized, scl)
-
 
 #writeImage(img, outputFolder)
