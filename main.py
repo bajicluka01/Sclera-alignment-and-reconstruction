@@ -3,6 +3,7 @@ import numpy as np
 import os
 from sklearn.decomposition import PCA
 from scipy.spatial import distance
+from model import Model
 #import imutils
 
 outputFolder = "output"
@@ -129,49 +130,64 @@ def similarity(im1, im2, covarianceMatrix):
     dist = distance.mahalanobis(im1, im2, covarianceMatrix)
     return dist
 
+#necessary for Windows multiprocessing
+if __name__ == '__main__':
 
-ids, images = read_images()
-scleras = [x for x in images if "sclera" in x]
+    images = ['SBVPI/1/1L_l_1_sclera.png', 'SBVPI/1/1L_r_1_sclera.png', 'SBVPI/1/1L_s_1_sclera.png', 'SBVPI/1/1L_u_2_sclera.png']
+    model = Model(images)
 
-#img = cv.imread("SBVPI/1/1L_s_1_sclera.png")
-#displayImage(img)
-#img = findPoints(img)
 
-vessels = [x for x in images if "vessels" in x]
 
-im1 = cv.imread(vessels[0])
-im1 = cv.cvtColor(im1, cv.COLOR_BGR2GRAY)
-#im1 = np.matrix.flatten(im1)
-im2 = cv.imread(vessels[1])
-im2 = cv.cvtColor(im2, cv.COLOR_BGR2GRAY)
-im2 = np.matrix.flatten(im2)
 
-im1mean = im1.mean()
-im2mean = im2.mean()
-#covariance = np.sum((im1-im1mean) * (im1-im1mean)) / (len(im1) - 1)
-#im1 = np.matrix.flatten(im1)
-#im1 = np.matrix.flatten(im1)
-#covarianceMatrix = np.cov(im1, im1)
-#covarianceMatrix = np.multiply(im1, np.matrix.transpose(im1))
-#covarianceMatrix = np.multiply(im1, im1)
-#covarianceMatrix = np.matrix.transpose(im1).dot(im1)
-#im1 = np.matrix.flatten(im1)
 
-#print(covarianceMatrix.shape)
-#print(im1.shape)
-#print(np.linalg.inv(covarianceMatrix))
-#print(similarity(im1, im1, np.linalg.inv(covarianceMatrix)))
-#print(similarity(im1, im1, covarianceMatrix))
 
-for scl in scleras:
-    img = cv.imread(scl)
-    img, center, pois = findPoints(img)
-    #print(scl)
-    displayImage(img, scl)
 
-    img = alignment(img, center, pois)
-    normalized = normalization(img, center, pois)
-    #displayImage(normalized, scl, (normalized.shape[1], normalized.shape[0]))
-    displayImage(normalized, scl)
 
-#writeImage(img, outputFolder)
+    exit()
+
+
+    ids, images = read_images()
+    scleras = [x for x in images if "sclera" in x]
+
+    #img = cv.imread("SBVPI/1/1L_s_1_sclera.png")
+    #displayImage(img)
+    #img = findPoints(img)
+
+    vessels = [x for x in images if "vessels" in x]
+
+    im1 = cv.imread(vessels[0])
+    im1 = cv.cvtColor(im1, cv.COLOR_BGR2GRAY)
+    #im1 = np.matrix.flatten(im1)
+    im2 = cv.imread(vessels[1])
+    im2 = cv.cvtColor(im2, cv.COLOR_BGR2GRAY)
+    im2 = np.matrix.flatten(im2)
+
+    im1mean = im1.mean()
+    im2mean = im2.mean()
+    #covariance = np.sum((im1-im1mean) * (im1-im1mean)) / (len(im1) - 1)
+    #im1 = np.matrix.flatten(im1)
+    #im1 = np.matrix.flatten(im1)
+    #covarianceMatrix = np.cov(im1, im1)
+    #covarianceMatrix = np.multiply(im1, np.matrix.transpose(im1))
+    #covarianceMatrix = np.multiply(im1, im1)
+    #covarianceMatrix = np.matrix.transpose(im1).dot(im1)
+    #im1 = np.matrix.flatten(im1)
+
+    #print(covarianceMatrix.shape)
+    #print(im1.shape)
+    #print(np.linalg.inv(covarianceMatrix))
+    #print(similarity(im1, im1, np.linalg.inv(covarianceMatrix)))
+    #print(similarity(im1, im1, covarianceMatrix))
+
+    for scl in scleras:
+        img = cv.imread(scl)
+        img, center, pois = findPoints(img)
+        #print(scl)
+        displayImage(img, scl)
+
+        img = alignment(img, center, pois)
+        normalized = normalization(img, center, pois)
+        #displayImage(normalized, scl, (normalized.shape[1], normalized.shape[0]))
+        displayImage(normalized, scl)
+
+    #writeImage(img, outputFolder)
