@@ -136,7 +136,8 @@ if __name__ == '__main__':
     images = ['SBVPI/1/1L_l_1_sclera.png', 'SBVPI/1/1L_r_1_sclera.png', 'SBVPI/1/1L_s_1_sclera.png', 'SBVPI/1/1L_u_2_sclera.png']
     model = Model(images)
 
-
+    #TODO isolate vessel images in separate folder
+    #teach the model to use all images within a class to create a new image (i.e. reconstruction)
 
 
 
