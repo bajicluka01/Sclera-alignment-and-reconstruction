@@ -14,13 +14,13 @@ import discriminator
 import matplotlib.animation as animation
 from IPython.display import HTML
 
+#repeatability
 torch.manual_seed(42)
 torch.use_deterministic_algorithms(True)
 
-#diffusion
+#DCGAN
 class Model:
-    def __init__(self, images):
-        self.images = images
+    def __init__(self, root):
         if torch.cuda.is_available():
             self.device = torch.device("cuda:0")
             ngpu = 1
@@ -28,7 +28,7 @@ class Model:
             self.device = torch.device("cpu")
             ngpu = 0
 
-        rootfolder = "SBVPI"
+        rootfolder = root
         channels = 3
         threads = 2
         batch_size = 128

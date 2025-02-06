@@ -7,3 +7,7 @@ data.csv
 output/
 problematic_images/
 train_images/
+vessels_only/
+sclera_only/
+segmented_sclera/
+sclera_only_normalized/

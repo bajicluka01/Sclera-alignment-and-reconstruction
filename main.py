@@ -1,6 +1,8 @@
 import cv2 as cv
 import numpy as np
 import os
+import re
+import shutil
 from sklearn.decomposition import PCA
 from scipy.spatial import distance
 from model import Model
@@ -31,7 +33,7 @@ def findPoints(im):
     ret, thresh = cv.threshold(im, 127, 255, 0)
     #find contours
     contours, hierarchy = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-    image = cv.drawContours(image, contours, -1, (0,255,0), 10)
+    #image = cv.drawContours(image, contours, -1, (0,255,0), 10)
 
     #find extremes
 
@@ -49,7 +51,7 @@ def findPoints(im):
             centroid_x = int(m['m10']/m['m00'])
             centroid_y = int(m['m01']/m['m00'])
             center = (centroid_x, centroid_y)
-            image = cv.circle(image, center, 10, (0,0,255), -1)
+            #image = cv.circle(image, center, 10, (0,0,255), -1)
         else:
             print("no centroid!")
             return image, [], []
@@ -68,10 +70,11 @@ def findPoints(im):
     pois.append(top)
     pois.append(bottom)
 
-    image = cv.circle(image, left, 15, (255,0,0), -1)
-    image = cv.circle(image, right, 15, (255,0,0), -1)
-    image = cv.circle(image, top, 15, (255,0,0), -1)
-    image = cv.circle(image, bottom, 15, (255,0,0), -1)
+    #visualization of points
+    #image = cv.circle(image, left, 15, (255,0,0), -1)
+    #image = cv.circle(image, right, 15, (255,0,0), -1)
+    #image = cv.circle(image, top, 15, (255,0,0), -1)
+    #image = cv.circle(image, bottom, 15, (255,0,0), -1)
 
     #testing
     #pois = []
@@ -98,7 +101,7 @@ def alignment(im, center, pois):
     rotated = cv.warpAffine(im, rotationMatrix, (ncols, nrows))
     return rotated
 
-def normalization(im, center, pois):
+def normalization(im, center, pois, maskedim):
     if len(pois) != 4:
         print("Incorrect amount of POIs")
         return []
@@ -107,45 +110,123 @@ def normalization(im, center, pois):
     bb_topleft = (pois[0][0], pois[2][1])
     bb_bottomright = (pois[1][0], pois[3][1])
 
-    cv.rectangle(im, bb_topleft, bb_bottomright, (0,0,255), 5)
+    #visualization of crop
+    #cv.rectangle(im, bb_topleft, bb_bottomright, (0,0,255), 5)
 
+    croppedmask = maskedim[pois[2][1]:pois[3][1], pois[0][0]:pois[1][0]].copy()
     cropped = im[pois[2][1]:pois[3][1], pois[0][0]:pois[1][0]].copy()
-    return cropped
+    return cropped, croppedmask
 
 def reconstruction(imgs):
     return 0
 
-def read_images():
+def read_images(folder):
     imgs = []
     subjects = []
-    dbfolder = "SBVPI/"
+    dbfolder = folder
     for file in os.scandir(dbfolder):
         current = file.name
         subjects.append(current)
-        for img in os.scandir(dbfolder+current+"/"):
-            imgs.append(dbfolder+current+"/"+img.name)
+        for img in os.scandir(dbfolder+"/"+current+"/"):
+            imgs.append(dbfolder+"/"+current+"/"+img.name)
     return subjects, imgs
 
 def similarity(im1, im2, covarianceMatrix):
     dist = distance.mahalanobis(im1, im2, covarianceMatrix)
     return dist
 
+def isolateVesselImages(foldername):
+    if os.path.exists(foldername) == False:
+        os.mkdir(foldername)
+    imgs = []
+    subjects = []
+    dbfolder = "SBVPI/"
+    for file in os.scandir(dbfolder):
+        current = file.name
+        newfolder = foldername+"/"+current+"/"
+        if os.path.exists(newfolder) == False:
+            os.mkdir(newfolder)
+        for img in os.scandir(dbfolder+current+"/"):
+            if "vessels" in img.name:
+                orig = dbfolder+current+"/"+img.name
+                dest = foldername+"/"+current+"/"+img.name
+                shutil.copyfile(orig, dest)
+    return 0
+
+#basically obtain only non-segmented images
+def isolateScleraImages(foldername):
+    if os.path.exists(foldername) == False:
+        os.mkdir(foldername)
+    imgs = []
+    subjects = []
+    dbfolder = "SBVPI/"
+    for file in os.scandir(dbfolder):
+        current = file.name
+        newfolder = foldername+"/"+current+"/"
+        if os.path.exists(newfolder) == False:
+            os.mkdir(newfolder)
+        for img in os.scandir(dbfolder+current+"/"):
+            if "vessels" not in img.name and "canthus" not in img.name and "iris" not in img.name and "eyelashes" not in img.name and "periocular" not in img.name and "pupil" not in img.name and "sclera" not in img.name:
+                orig = dbfolder+current+"/"+img.name
+                dest = foldername+"/"+current+"/"+img.name
+                shutil.copyfile(orig, dest)
+    return 0
+
+#sclera masks
+def isolateSegmentedScleraImages(foldername):
+    if os.path.exists(foldername) == False:
+        os.mkdir(foldername)
+    imgs = []
+    subjects = []
+    dbfolder = "SBVPI/"
+    for file in os.scandir(dbfolder):
+        current = file.name
+        newfolder = foldername+"/"+current+"/"
+        if os.path.exists(newfolder) == False:
+            os.mkdir(newfolder)
+        for img in os.scandir(dbfolder+current+"/"):
+            if "sclera" in img.name:
+                orig = dbfolder+current+"/"+img.name
+                dest = foldername+"/"+current+"/"+img.name
+                shutil.copyfile(orig, dest)
+    return 0
+
+#perform normalization procedure on all images in inputfolder and save them in outputfolder
+def normalizeFolder(inputfolder, outputfolder):
+    if os.path.exists(outputfolder) == False:
+        os.mkdir(outputfolder)
+    subjects, images = read_images(inputfolder)
+    for scl in images:
+        img = cv.imread(scl)
+        maskedscl = scl.replace(inputfolder, "SBVPI")
+        maskedscl = maskedscl.replace(".jpg", "_sclera.png")
+        masked = cv.imread(maskedscl)
+        maskedimg, center, pois = findPoints(masked)
+        img = alignment(img, center, pois)
+        normalized, normalizedmask = normalization(img, center, pois, masked)
+        subject = re.search('[0-9]+', scl).group()
+        subfolder = outputfolder+"/"+subject
+        if os.path.exists(subfolder) == False:
+            os.mkdir(subfolder)
+        out = scl.replace(inputfolder, outputfolder)
+        cv.imwrite(out, normalized)
+    return 0
+
 #necessary for Windows multiprocessing
 if __name__ == '__main__':
 
-    images = ['SBVPI/1/1L_l_1_sclera.png', 'SBVPI/1/1L_r_1_sclera.png', 'SBVPI/1/1L_s_1_sclera.png', 'SBVPI/1/1L_u_2_sclera.png']
-    model = Model(images)
+    #images = ['SBVPI/1/1L_l_1_sclera.png', 'SBVPI/1/1L_r_1_sclera.png', 'SBVPI/1/1L_s_1_sclera.png', 'SBVPI/1/1L_u_2_sclera.png']
+    #model = Model("train_images")
 
-    #TODO isolate vessel images in separate folder
-    #teach the model to use all images within a class to create a new image (i.e. reconstruction)
+    #these only need to be run once to create certain subsets of SBVPI database
+    #isolateVesselImages("vessels_only")
+    #isolateScleraImages("sclera_only")
+    #isolateSegmentedScleraImages("segmented_sclera")
 
-
-
-
+    normalizeFolder("sclera_only", "sclera_only_normalized")
 
 
     exit()
-
 
     ids, images = read_images()
     scleras = [x for x in images if "sclera" in x]
