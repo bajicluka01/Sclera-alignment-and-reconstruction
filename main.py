@@ -57,7 +57,40 @@ def findPoints(im):
             return image, [], []
     else:
         print("zero contours!")
-        return image, [], []
+        #there should be a more elegant way to do this, but it only happens on 3 images in SBVPI anyway
+        tmp = np.any(im, axis=0)
+        print(np.argmin(np.any(np.flip(im), axis=0)))
+        tmp2 = int(np.nonzero(np.any(im>0, axis=0))[0])
+        leftx = tmp2[0]
+        lefty = np.argmin(tmp)
+        tmp = np.any(np.flip(im, axis=0), axis=0)
+        tmp2 = int(np.nonzero(np.any(im>0, axis=0))[0])
+        rightx = tmp2[-1]
+        righty = np.argmin(tmp)
+        tmp = np.any(im, axis=1)
+        tmp2 = int(np.nonzero(np.any(im>0, axis=1))[0])
+        topx = tmp2[0]
+        topy = np.argmin(tmp)
+        tmp = np.any(np.flip(im, axis=1), axis=1)
+        tmp2 = int(np.nonzero(np.any(im>0, axis=1))[0])
+        bottomx = tmp2[-1]
+        bottomy = np.argmin(tmp)
+
+
+
+        pois = []
+        pois.append((leftx, lefty))
+        pois.append((rightx, righty))
+        pois.append((topx, topy))
+        pois.append((bottomx, bottomy))
+
+        image = cv.circle(image, pois[0], 15, (255,0,0), -1)
+        image = cv.circle(image, pois[1], 15, (255,0,0), -1)
+        image = cv.circle(image, pois[2], 15, (255,0,0), -1)
+        image = cv.circle(image, pois[3], 15, (255,0,0), -1)
+
+        #TODO probably something better for center (not sure how relevant it is though), worst case pupil center?
+        return image, (0,0), pois
 
     left = tuple(cnt[cnt[:,:,0].argmin()][0])
     right = tuple(cnt[cnt[:,:,0].argmax()][0])
@@ -101,7 +134,7 @@ def alignment(im, center, pois):
     rotated = cv.warpAffine(im, rotationMatrix, (ncols, nrows))
     return rotated
 
-def normalization(im, center, pois, maskedim):
+def normalization(im, center, pois, maskedim, outdims):
     if len(pois) != 4:
         print("Incorrect amount of POIs")
         return []
@@ -115,7 +148,9 @@ def normalization(im, center, pois, maskedim):
 
     croppedmask = maskedim[pois[2][1]:pois[3][1], pois[0][0]:pois[1][0]].copy()
     cropped = im[pois[2][1]:pois[3][1], pois[0][0]:pois[1][0]].copy()
-    return cropped, croppedmask
+    croppedmaskout = cv.resize(croppedmask, (outdims[0], outdims[1]), interpolation=cv.INTER_NEAREST)
+    croppedout = cv.resize(cropped, (outdims[0], outdims[1]), interpolation=cv.INTER_NEAREST)
+    return croppedout, croppedmaskout
 
 def reconstruction(imgs):
     return 0
@@ -192,7 +227,7 @@ def isolateSegmentedScleraImages(foldername):
     return 0
 
 #perform normalization procedure on all images in inputfolder and save them in outputfolder
-def normalizeFolder(inputfolder, outputfolder):
+def normalizeFolder(inputfolder, outputfolder, outdims, ignore):
     if os.path.exists(outputfolder) == False:
         os.mkdir(outputfolder)
     subjects, images = read_images(inputfolder)
@@ -200,10 +235,15 @@ def normalizeFolder(inputfolder, outputfolder):
         img = cv.imread(scl)
         maskedscl = scl.replace(inputfolder, "SBVPI")
         maskedscl = maskedscl.replace(".jpg", "_sclera.png")
+        #print(maskedscl)
+        if maskedscl in ignore:
+            continue
         masked = cv.imread(maskedscl)
+        if masked is None:
+            continue
         maskedimg, center, pois = findPoints(masked)
         img = alignment(img, center, pois)
-        normalized, normalizedmask = normalization(img, center, pois, masked)
+        normalized, normalizedmask = normalization(img, center, pois, masked, outdims)
         subject = re.search('[0-9]+', scl).group()
         subfolder = outputfolder+"/"+subject
         if os.path.exists(subfolder) == False:
@@ -218,12 +258,22 @@ if __name__ == '__main__':
     #images = ['SBVPI/1/1L_l_1_sclera.png', 'SBVPI/1/1L_r_1_sclera.png', 'SBVPI/1/1L_s_1_sclera.png', 'SBVPI/1/1L_u_2_sclera.png']
     #model = Model("train_images")
 
-    #these only need to be run once to create certain subsets of SBVPI database
+    #these only need to be run once to create certain subsets of SBVPI database and normalize the images
     #isolateVesselImages("vessels_only")
     #isolateScleraImages("sclera_only")
     #isolateSegmentedScleraImages("segmented_sclera")
 
-    normalizeFolder("sclera_only", "sclera_only_normalized")
+    #these images have incorectly segmented sclera (in the original database), nothing I can do about it
+    ignoredImages = ["SBVPI/14/14R_r_1_sclera.png", "SBVPI/21/21L_s_1_sclera.png", "SBVPI/36/36R_l_1_sclera.png"]
+
+    #TODO set this to database average?
+    outsize = [1200, 1000]
+    #normalizeFolder("sclera_only", "sclera_only_normalized", outsize, ignoredImages)
+
+    #img = cv.imread("SBVPI/14/14R_r_1_sclera.png")
+    #im, cent, points = findPoints(img)
+    #displayImage(im, "whatever")
+    #print(points)
 
 
     exit()
