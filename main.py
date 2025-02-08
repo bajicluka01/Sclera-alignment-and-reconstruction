@@ -57,40 +57,7 @@ def findPoints(im):
             return image, [], []
     else:
         print("zero contours!")
-        #there should be a more elegant way to do this, but it only happens on 3 images in SBVPI anyway
-        tmp = np.any(im, axis=0)
-        print(np.argmin(np.any(np.flip(im), axis=0)))
-        tmp2 = int(np.nonzero(np.any(im>0, axis=0))[0])
-        leftx = tmp2[0]
-        lefty = np.argmin(tmp)
-        tmp = np.any(np.flip(im, axis=0), axis=0)
-        tmp2 = int(np.nonzero(np.any(im>0, axis=0))[0])
-        rightx = tmp2[-1]
-        righty = np.argmin(tmp)
-        tmp = np.any(im, axis=1)
-        tmp2 = int(np.nonzero(np.any(im>0, axis=1))[0])
-        topx = tmp2[0]
-        topy = np.argmin(tmp)
-        tmp = np.any(np.flip(im, axis=1), axis=1)
-        tmp2 = int(np.nonzero(np.any(im>0, axis=1))[0])
-        bottomx = tmp2[-1]
-        bottomy = np.argmin(tmp)
-
-
-
-        pois = []
-        pois.append((leftx, lefty))
-        pois.append((rightx, righty))
-        pois.append((topx, topy))
-        pois.append((bottomx, bottomy))
-
-        image = cv.circle(image, pois[0], 15, (255,0,0), -1)
-        image = cv.circle(image, pois[1], 15, (255,0,0), -1)
-        image = cv.circle(image, pois[2], 15, (255,0,0), -1)
-        image = cv.circle(image, pois[3], 15, (255,0,0), -1)
-
-        #TODO probably something better for center (not sure how relevant it is though), worst case pupil center?
-        return image, (0,0), pois
+        return image, (0,0), []
 
     left = tuple(cnt[cnt[:,:,0].argmin()][0])
     right = tuple(cnt[cnt[:,:,0].argmax()][0])
@@ -134,7 +101,7 @@ def alignment(im, center, pois):
     rotated = cv.warpAffine(im, rotationMatrix, (ncols, nrows))
     return rotated
 
-def normalization(im, center, pois, maskedim, outdims):
+def normalization(im, center, pois, maskedim, outdims, type):
     if len(pois) != 4:
         print("Incorrect amount of POIs")
         return []
@@ -146,10 +113,20 @@ def normalization(im, center, pois, maskedim, outdims):
     #visualization of crop
     #cv.rectangle(im, bb_topleft, bb_bottomright, (0,0,255), 5)
 
-    croppedmask = maskedim[pois[2][1]:pois[3][1], pois[0][0]:pois[1][0]].copy()
-    cropped = im[pois[2][1]:pois[3][1], pois[0][0]:pois[1][0]].copy()
+    if type == "full":
+        imgray = cv.cvtColor(maskedim, cv.COLOR_BGR2GRAY)
+        x,y,w,h = cv.boundingRect(cv.findNonZero(imgray))
+        croppedmask = maskedim[y:y+h, x:x+w].copy()
+        cropped = im[y:y+h, x:x+w].copy()
+    elif type == "main":
+        croppedmask = maskedim[pois[2][1]:pois[3][1], pois[0][0]:pois[1][0]].copy()
+        cropped = im[pois[2][1]:pois[3][1], pois[0][0]:pois[1][0]].copy()
+    else: 
+        return [], []
+
     croppedmaskout = cv.resize(croppedmask, (outdims[0], outdims[1]), interpolation=cv.INTER_NEAREST)
     croppedout = cv.resize(cropped, (outdims[0], outdims[1]), interpolation=cv.INTER_NEAREST)
+    
     return croppedout, croppedmaskout
 
 def reconstruction(imgs):
@@ -243,7 +220,7 @@ def normalizeFolder(inputfolder, outputfolder, outdims, ignore):
             continue
         maskedimg, center, pois = findPoints(masked)
         img = alignment(img, center, pois)
-        normalized, normalizedmask = normalization(img, center, pois, masked, outdims)
+        normalized, normalizedmask = normalization(img, center, pois, masked, outdims, "full")
         subject = re.search('[0-9]+', scl).group()
         subfolder = outputfolder+"/"+subject
         if os.path.exists(subfolder) == False:
@@ -268,12 +245,24 @@ if __name__ == '__main__':
 
     #TODO set this to database average?
     outsize = [1200, 1000]
-    #normalizeFolder("sclera_only", "sclera_only_normalized", outsize, ignoredImages)
+    normalizeFolder("sclera_only", "sclera_only_normalized_full", outsize, ignoredImages)
 
     #img = cv.imread("SBVPI/14/14R_r_1_sclera.png")
     #im, cent, points = findPoints(img)
     #displayImage(im, "whatever")
     #print(points)
+
+    tmp = 'SBVPI/1/1L_l_1_sclera.png'
+    tmp2 = 'SBVPI/1/1L_l_1.jpg'
+
+    #img = cv.imread(tmp2)
+    #imgray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    #x,y,w,h = cv.boundingRect(cv.findNonZero(imgray))
+    #masked = cv.imread(tmp)
+    #croppedmask = maskedim[y:y+h, x:x+w].copy()
+    #cropped = img[y:y+h, x:x+w].copy()
+    
+
 
 
     exit()
