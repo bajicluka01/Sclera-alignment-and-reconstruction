@@ -204,7 +204,7 @@ def isolateSegmentedScleraImages(foldername):
     return 0
 
 #perform normalization procedure on all images in inputfolder and save them in outputfolder
-def normalizeFolder(inputfolder, outputfolder, outdims, ignore):
+def normalizeFolder(inputfolder, outputfolder, outdims, ignore, type, applymask):
     if os.path.exists(outputfolder) == False:
         os.mkdir(outputfolder)
     subjects, images = read_images(inputfolder)
@@ -218,9 +218,11 @@ def normalizeFolder(inputfolder, outputfolder, outdims, ignore):
         masked = cv.imread(maskedscl)
         if masked is None:
             continue
+        if applymask:
+            img = cv.bitwise_and(img, np.full_like(img, fill_value=(255,255,255)), mask=cv.cvtColor(masked, cv.COLOR_BGR2GRAY))
         maskedimg, center, pois = findPoints(masked)
         img = alignment(img, center, pois)
-        normalized, normalizedmask = normalization(img, center, pois, masked, outdims, "full")
+        normalized, normalizedmask = normalization(img, center, pois, masked, outdims, type)
         subject = re.search('[0-9]+', scl).group()
         subfolder = outputfolder+"/"+subject
         if os.path.exists(subfolder) == False:
@@ -245,7 +247,7 @@ if __name__ == '__main__':
 
     #TODO set this to database average?
     outsize = [1200, 1000]
-    normalizeFolder("sclera_only", "sclera_only_normalized_full", outsize, ignoredImages)
+    normalizeFolder("sclera_only", "sclera_only_normalized_full_masked", outsize, ignoredImages, "full", True)
 
     #img = cv.imread("SBVPI/14/14R_r_1_sclera.png")
     #im, cent, points = findPoints(img)
